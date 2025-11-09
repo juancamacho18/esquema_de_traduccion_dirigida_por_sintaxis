@@ -191,3 +191,14 @@ A continuación, se muestra algunas pruebas con algunas expresiones junto a los 
               └─id(c) valor=8
         
         resultado: 33.5
+
+# Conclusion
+Se demuestra la implementacion practica de un esquema de traducción dirigida por la sintaxis (EDTS) para una gramatica LL(1), integrando todos los componentes principales de un analizador semantico como:
+
+-Calculo de los conjuntos PRIMERO, SIGUIENTE y PREDICCIÓN.
+
+-Construccion del AST decorado con atributos sintetizados.
+
+-Evaluación y manejo de variables y generación de la tabla de simbolos.
+
+-Generacion de la gramatica de atributos a partir de la gramatica inicial.
