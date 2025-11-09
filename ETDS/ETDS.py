@@ -95,6 +95,42 @@ def Predicciones(gramatica, primero, siguiente):
                 conjunto_prediccion[regla].update(siguiente[nt])
     return conjunto_prediccion
 
+def imprimir_gramatica_de_atributos(gramatica):
+    print("\n--- Gramática de Atributos ---\n")
+    for nt, producciones in gramatica.items():
+        for prod in producciones:
+            regla=f"{nt} → {' '.join(prod)}"
+            if nt=='Expr':
+                accion="{ Expr.val := Term.val + Expr_op.val }"
+            elif nt=='Expr_op':
+                if '+' in prod:
+                    accion="{ Expr_op.val := Term.val + Expr_op1.val }"
+                elif '-' in prod:
+                    accion="{ Expr_op.val := -Term.val + Expr_op1.val }"
+                else:
+                    accion="{ Expr_op.val := 0 }"
+            elif nt=='Term':
+                accion="{ Term.val := Fact.val * Term_op.val }"
+            elif nt=='Term_op':
+                if '*' in prod:
+                    accion="{ Term_op.val := Fact.val * Term_op1.val }"
+                elif '/' in prod:
+                    accion="{ Term_op.val := Fact.val / Term_op1.val }"
+                else:
+                    accion="{ Term_op.val := 1 }"
+            elif nt=='Fact':
+                if 'Expr' in prod:
+                    accion="{ Fact.val := Expr.val }"
+                elif 'num' in prod:
+                    accion="{ Fact.val := valor(num.lexema) }"
+                elif 'id' in prod:
+                    accion="{ Fact.val := buscar(symtab, id.lexema) }"
+                else:
+                    accion=""
+            else:
+                accion=""
+            print(f"{regla} {accion}")
+
 def tokenize(expr):
     tokens=[]
     i=0
@@ -121,7 +157,7 @@ def tokenize(expr):
             tokens.append((c, c))
             i+=1
         else:
-            print("Carácter inesperado:", c)
+            print("caracter inesperado:", c)
             i+=1
     tokens.append(('$', '$'))
     return tokens
@@ -163,26 +199,47 @@ class Parser:
             exit()
 
     def parse(self):
-        node = self.expr()
+        node=self.expr()
         if self.mirar()!='$':
             print("Error: tokens extra al final")
         return node
 
     def expr(self):
-        left=self.term()
-        while self.mirar() in ('+', '-'):
-            op=self.avance()[0]
-            right=self.term()
-            left=Op(op, left, right)
-        return left
+        tnode=self.term()
+        return self.expr_op(tnode)
+
+    def expr_op(self, heredado):
+        if self.mirar()=='+':
+            self.avance()
+            tnode=self.term()
+            nodo=Op('+', heredado, tnode)
+            return self.expr_op(nodo)
+        elif self.mirar()=='-':
+            self.avance()
+            tnode=self.term()
+            nodo=Op('-', heredado, tnode)
+            return self.expr_op(nodo)
+        else:
+            return heredado
 
     def term(self):
-        left=self.fact()
-        while self.mirar() in ('*', '/'):
-            op=self.avance()[0]
-            right=self.fact()
-            left=Op(op, left, right)
-        return left
+        fnode=self.fact()
+        return self.term_op(fnode)
+
+    def term_op(self, heredado):
+        if self.mirar()=='*':
+            self.avance()
+            fnode=self.fact()
+            nodo=Op('*', heredado, fnode)
+            return self.term_op(nodo)
+        elif self.mirar()=='/':
+            self.avance()
+            fnode=self.fact()
+            nodo=Op('/', heredado, fnode)
+            return self.term_op(nodo)
+        else:
+            return heredado
+
 
     def fact(self):
         t=self.mirar()
@@ -227,18 +284,20 @@ def evaluar(node, tabla):
             node.val= izq/der
         return node.val
 
-def imprimir_ast(node, tabla, nivel=0):
-    esp="  "*nivel
+def imprimir_ast(node, tabla, prefijo="", es_ultimo=True):
+    rama="└─" if es_ultimo else "├─"
     if isinstance(node, Num):
-        print(esp+ f"Num({node.value})")
+        print(f"{prefijo}{rama}num({node.value})")
     elif isinstance(node, Id):
         val=tabla[node.name]['valor']
-        print(esp+ f"Id({node.name}) valor={val}")
+        print(f"{prefijo}{rama}id({node.name}) valor={val}")
     elif isinstance(node, Op):
-        print(esp+ f"BinOp({node.op}) val={node.val}")
-        imprimir_ast(node.left, tabla, nivel+1)
-        imprimir_ast(node.right, tabla, nivel+1)
-
+        print(f"{prefijo}{rama}op({node.op}) val={node.val}")
+        hijos=[node.left, node.right]
+        for i, hijo in enumerate(hijos):
+            es_ult=(i== len(hijos)-1)
+            nuevo_prefijo= prefijo+("   " if es_ultimo else "│  ")
+            imprimir_ast(hijo, tabla, nuevo_prefijo, es_ult)
 
 def ejecutar(expresion, valores=None):
     print(expresion)
@@ -261,7 +320,5 @@ def ejecutar(expresion, valores=None):
     imprimir_ast(ast, parser.symtab)
 
     print("\nresultado:", getattr(ast, 'val', None))
-
-
+imprimir_gramatica_de_atributos(gramatica)
 ejecutar("a + 3 * (b - 2)", {'a': 10, 'b': 5})
-
