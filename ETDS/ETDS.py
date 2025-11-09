@@ -264,5 +264,4 @@ def ejecutar(expresion, valores=None):
 
 
 ejecutar("a + 3 * (b - 2)", {'a': 10, 'b': 5})
-ejecutar("(1 + 2) * (3 + 4)")
-ejecutar("12 / (4 - 2) + 7")
+
